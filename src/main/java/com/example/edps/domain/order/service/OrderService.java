@@ -13,9 +13,8 @@ import com.example.edps.domain.product.repository.ProductRepository;
 import com.example.edps.global.error.ErrorType;
 import com.example.edps.global.error.exception.BusinessException;
 import com.example.edps.global.error.exception.SoldOutException;
+import com.example.edps.domain.common.port.DomainEventPublisher;
 import com.example.edps.infra.kafka.KafkaTopics;
-import com.example.edps.infra.kafka.message.EventEnvelope;
-import com.example.edps.infra.outbox.service.OutboxService;
 import io.opentelemetry.api.trace.Span;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +32,7 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
-    private final OutboxService outboxService;
+    private final DomainEventPublisher domainEventPublisher;
 
     /**
      * 주문 생성 및 결제 요청
@@ -115,11 +114,7 @@ public class OrderService {
         PaymentRequestedCommand cmd = PaymentRequestedCommand.from(order, scenario);
         String traceId = Span.current().getSpanContext().getTraceId();
 
-        EventEnvelope<PaymentRequestedCommand> envelope
-                = EventEnvelope.of(traceId, KafkaTopics.PAYMENT_COMMAND_REQUESTED, cmd);
-        String key = String.valueOf(cmd.userId());
-
-        outboxService.save(KafkaTopics.PAYMENT_COMMAND_REQUESTED, key, envelope);
+        domainEventPublisher.publish(KafkaTopics.PAYMENT_COMMAND_REQUESTED, String.valueOf(cmd.userId()), cmd, traceId);
 
         // 이후 infra.kafka.consumer.PaymentCommandConsumer에서 수신해 결제 처리
     }

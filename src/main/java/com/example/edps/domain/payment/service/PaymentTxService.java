@@ -7,11 +7,10 @@ import com.example.edps.domain.payment.event.PaymentCompletedEvent;
 import com.example.edps.domain.payment.event.PaymentRequestedCommand;
 import com.example.edps.domain.payment.repository.PaymentLogRepository;
 import com.example.edps.domain.payment.repository.PaymentRepository;
+import com.example.edps.domain.common.port.DomainEventPublisher;
 import com.example.edps.global.error.ErrorType;
 import com.example.edps.global.error.exception.BusinessException;
 import com.example.edps.infra.kafka.KafkaTopics;
-import com.example.edps.infra.kafka.message.EventEnvelope;
-import com.example.edps.infra.outbox.service.OutboxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,7 +24,7 @@ import java.time.LocalDateTime;
 public class PaymentTxService {
     private final PaymentRepository paymentRepository;
     private final PaymentLogRepository paymentLogRepository;
-    private final OutboxService outboxService;
+    private final DomainEventPublisher domainEventPublisher;
     private final int maxAttempts = 5;
 
     /**
@@ -164,7 +163,7 @@ public class PaymentTxService {
      */
     private void publishAndRecord(Long paymentId, String traceId, String eventId, PayStatus status, PaymentCompletedEvent event) {
         String topic = resolvedTopic(status);
-        outboxService.save(topic, String.valueOf(paymentId), EventEnvelope.of(traceId, topic, event));
+        domainEventPublisher.publish(topic, String.valueOf(paymentId), event, traceId);
     }
 
     private String resolvedTopic(PayStatus status) {
