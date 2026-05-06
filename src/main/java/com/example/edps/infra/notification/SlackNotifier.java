@@ -1,5 +1,6 @@
 package com.example.edps.infra.notification;
 
+import com.example.edps.domain.notification.port.AlertSender;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -9,19 +10,20 @@ import java.time.LocalDateTime;
 
 @Component
 @Slf4j
-public class SlackNotifier {
+public class SlackNotifier implements AlertSender {
     private final WebClient webClient;
 
     public SlackNotifier(@Value("${slack.webhook.url}") String webhookUrl) {
         this.webClient = WebClient.builder().baseUrl(webhookUrl).build();
     }
 
+    @Override
     public void sendDlqAlert(String originalTopic, String eventId, Long orderId, Long paymentId, String cause, String message) {
         String body = """
-            {
-                "text": ":rotating_light: *DLQ Alert*\\n• originalTopic: `%s`\\n• eventId: `%s`\\n• orderId: `%s`\\n• paymentId: `%s`\\n• cause: `%s`\\n• message: `%s`\\n• time: `%s`"
-            }
-            """.formatted(originalTopic, eventId, orderId, paymentId, cause, message, LocalDateTime.now());
+                {
+                    "text": ":rotating_light: *DLQ Alert*\\n• originalTopic: `%s`\\n• eventId: `%s`\\n• orderId: `%s`\\n• paymentId: `%s`\\n• cause: `%s`\\n• message: `%s`\\n• time: `%s`"
+                }
+                """.formatted(originalTopic, eventId, orderId, paymentId, cause, message, LocalDateTime.now());
 
         try {
             webClient.post()

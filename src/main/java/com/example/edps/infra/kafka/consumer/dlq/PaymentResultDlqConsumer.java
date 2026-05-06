@@ -6,7 +6,7 @@ import com.example.edps.infra.kafka.dlq.entity.PaymentDlqLog;
 import com.example.edps.infra.kafka.dlq.repository.PaymentDlqLogRepository;
 import com.example.edps.infra.kafka.message.EventEnvelope;
 import com.example.edps.infra.kafka.message.EventEnvelopeParser;
-import com.example.edps.infra.notification.SlackNotifier;
+import com.example.edps.domain.notification.port.AlertSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 public class PaymentResultDlqConsumer {
     private final EventEnvelopeParser eventEnvelopeParser;
     private final PaymentDlqLogRepository paymentDlqLogRepository;
-    private final SlackNotifier slackNotifier;
+    private final AlertSender alertSender;
 
     @KafkaListener(topics = KafkaTopics.PAYMENT_RESULT_DLQ, groupId = "payment-result-dlq")
     public void dlq(
@@ -63,6 +63,6 @@ public class PaymentResultDlqConsumer {
                         .build()
         );
 
-        slackNotifier.sendDlqAlert(originalTopic, eventId, orderId, paymentId, cause, message);
+        alertSender.sendDlqAlert(originalTopic, eventId, orderId, paymentId, cause, message);
     }
 }
