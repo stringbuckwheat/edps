@@ -1,7 +1,7 @@
 package com.example.edps.infra.kafka.consumer.dlq;
 
 import com.example.edps.domain.payment.event.PaymentRequestedCommand;
-import com.example.edps.infra.kafka.KafkaTopics;
+import com.example.edps.global.common.PaymentEventTopics;
 import com.example.edps.infra.kafka.dlq.entity.PaymentDlqLog;
 import com.example.edps.infra.kafka.dlq.repository.PaymentDlqLogRepository;
 import com.example.edps.infra.kafka.message.EventEnvelope;
@@ -22,7 +22,7 @@ public class PaymentCommandDlqConsumer {
     private final AlertSender alertSender;
     private final EventEnvelopeParser eventEnvelopeParser;
 
-    @KafkaListener(topics = KafkaTopics.PAYMENT_COMMAND_REQUESTED_DLQ, groupId = "payment-dlq")
+    @KafkaListener(topics = PaymentEventTopics.PAYMENT_COMMAND_REQUESTED_DLQ, groupId = "payment-dlq")
     public void dlq(
             String value,
             @Header(value = KafkaHeaders.DLT_EXCEPTION_CAUSE_FQCN, required = false) String cause, // 어떤 예외클래스인지
@@ -39,7 +39,7 @@ public class PaymentCommandDlqConsumer {
 
         try {
             EventEnvelope<PaymentRequestedCommand> env =
-                    eventEnvelopeParser.parse(value, KafkaTopics.PAYMENT_COMMAND_REQUESTED_DLQ, PaymentRequestedCommand.class);
+                    eventEnvelopeParser.parse(value, PaymentEventTopics.PAYMENT_COMMAND_REQUESTED_DLQ, PaymentRequestedCommand.class);
             orderId = env.payload().orderId();
             paymentId = env.payload().paymentId();
             eventId = env.eventId();
@@ -50,7 +50,7 @@ public class PaymentCommandDlqConsumer {
         // 실패건 DB 저장
         paymentDlqLogRepository.save(
                 PaymentDlqLog.builder()
-                        .topic(KafkaTopics.PAYMENT_COMMAND_REQUESTED_DLQ)
+                        .topic(PaymentEventTopics.PAYMENT_COMMAND_REQUESTED_DLQ)
                         .originalTopic(originalTopic)
                         .originalOffset(originalOffset)
                         .consumerGroup(consumerGroup)

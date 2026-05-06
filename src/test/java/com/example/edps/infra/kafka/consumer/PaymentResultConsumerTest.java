@@ -5,7 +5,7 @@ import com.example.edps.domain.payment.event.PaymentCompletedEvent;
 import com.example.edps.domain.payment.service.PaymentResultTxService;
 import com.example.edps.global.error.ErrorType;
 import com.example.edps.global.error.exception.BusinessException;
-import com.example.edps.infra.kafka.KafkaTopics;
+import com.example.edps.global.common.PaymentEventTopics;
 import com.example.edps.infra.kafka.message.EventEnvelope;
 import com.example.edps.infra.kafka.message.EventEnvelopeParser;
 import org.junit.jupiter.api.DisplayName;
@@ -36,8 +36,8 @@ class PaymentResultConsumerTest {
     @InjectMocks
     private PaymentResultConsumer consumer;
 
-    private static final String SUCCESS_TOPIC = KafkaTopics.PAYMENT_EVENT_SUCCEEDED;
-    private static final String FAILED_TOPIC = KafkaTopics.PAYMENT_EVENT_FAILED;
+    private static final String SUCCESS_TOPIC = PaymentEventTopics.PAYMENT_EVENT_SUCCEEDED;
+    private static final String FAILED_TOPIC = PaymentEventTopics.PAYMENT_EVENT_FAILED;
     private static final String EVENT_ID = "fixed-event-id";
 
     private static final EventEnvelope<PaymentCompletedEvent> SUCCESS_ENVELOPE =

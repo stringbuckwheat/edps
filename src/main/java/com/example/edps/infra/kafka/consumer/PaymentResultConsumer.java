@@ -2,7 +2,7 @@ package com.example.edps.infra.kafka.consumer;
 
 import com.example.edps.domain.payment.event.PaymentCompletedEvent;
 import com.example.edps.domain.payment.service.PaymentResultTxService;
-import com.example.edps.infra.kafka.KafkaTopics;
+import com.example.edps.global.common.PaymentEventTopics;
 import com.example.edps.infra.kafka.message.EventEnvelope;
 import com.example.edps.infra.kafka.message.EventEnvelopeParser;
 import lombok.RequiredArgsConstructor;
@@ -23,10 +23,10 @@ public class PaymentResultConsumer {
      *
      * @param value
      */
-    @KafkaListener(topics = KafkaTopics.PAYMENT_EVENT_SUCCEEDED, groupId = "payment-result")
+    @KafkaListener(topics = PaymentEventTopics.PAYMENT_EVENT_SUCCEEDED, groupId = "payment-result")
     public void onSuccess(String value) {
         EventEnvelope<PaymentCompletedEvent> envelope
-                = eventEnvelopeParser.parse(value, KafkaTopics.PAYMENT_EVENT_SUCCEEDED, PaymentCompletedEvent.class);
+                = eventEnvelopeParser.parse(value, PaymentEventTopics.PAYMENT_EVENT_SUCCEEDED, PaymentCompletedEvent.class);
 
         log.info("[PaymentResult] 성공 이벤트 수신 eventId={}, paymentId={}, orderId={}",
                 envelope.eventId(), envelope.payload().paymentId(), envelope.payload().orderId());
@@ -39,10 +39,10 @@ public class PaymentResultConsumer {
      *
      * @param value
      */
-    @KafkaListener(topics = KafkaTopics.PAYMENT_EVENT_FAILED, groupId = "payment-result")
+    @KafkaListener(topics = PaymentEventTopics.PAYMENT_EVENT_FAILED, groupId = "payment-result")
     public void onFailed(String value) {
         EventEnvelope<PaymentCompletedEvent> envelope
-                = eventEnvelopeParser.parse(value, KafkaTopics.PAYMENT_EVENT_FAILED, PaymentCompletedEvent.class);
+                = eventEnvelopeParser.parse(value, PaymentEventTopics.PAYMENT_EVENT_FAILED, PaymentCompletedEvent.class);
 
         log.info("[PaymentResult] 실패 이벤트 수신 eventId={}, paymentId={}, orderId={}, reason={}",
                 envelope.eventId(), envelope.payload().paymentId(), envelope.payload().orderId(),

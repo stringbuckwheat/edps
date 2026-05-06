@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import static com.example.edps.infra.kafka.KafkaTopics.PAYMENT_COMMAND_REQUESTED;
+import static com.example.edps.global.common.PaymentEventTopics.PAYMENT_COMMAND_REQUESTED;
 
 /* 결제 요청 커맨드 수신 */
 @Component

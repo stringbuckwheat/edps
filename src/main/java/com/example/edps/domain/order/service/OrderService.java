@@ -14,7 +14,7 @@ import com.example.edps.global.error.ErrorType;
 import com.example.edps.global.error.exception.BusinessException;
 import com.example.edps.global.error.exception.SoldOutException;
 import com.example.edps.domain.common.port.DomainEventPublisher;
-import com.example.edps.infra.kafka.KafkaTopics;
+import com.example.edps.global.common.PaymentEventTopics;
 import io.opentelemetry.api.trace.Span;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -114,7 +114,7 @@ public class OrderService {
         PaymentRequestedCommand cmd = PaymentRequestedCommand.from(order, scenario);
         String traceId = Span.current().getSpanContext().getTraceId();
 
-        domainEventPublisher.publish(KafkaTopics.PAYMENT_COMMAND_REQUESTED, String.valueOf(cmd.userId()), cmd, traceId);
+        domainEventPublisher.publish(PaymentEventTopics.PAYMENT_COMMAND_REQUESTED, String.valueOf(cmd.userId()), cmd, traceId);
 
         // 이후 infra.kafka.consumer.PaymentCommandConsumer에서 수신해 결제 처리
     }

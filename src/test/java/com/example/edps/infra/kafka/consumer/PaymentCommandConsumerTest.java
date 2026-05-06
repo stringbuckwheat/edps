@@ -2,7 +2,7 @@ package com.example.edps.infra.kafka.consumer;
 
 import com.example.edps.domain.order.enums.PgScenario;
 import com.example.edps.domain.payment.event.PaymentRequestedCommand;
-import com.example.edps.infra.kafka.KafkaTopics;
+import com.example.edps.global.common.PaymentEventTopics;
 import com.example.edps.infra.kafka.handler.PaymentCommandHandler;
 import com.example.edps.infra.kafka.message.EventEnvelope;
 import com.example.edps.infra.kafka.message.EventEnvelopeParser;
@@ -33,7 +33,7 @@ class PaymentCommandConsumerTest {
     @InjectMocks
     private PaymentCommandConsumer consumer;
 
-    private static final String TOPIC = KafkaTopics.PAYMENT_COMMAND_REQUESTED;
+    private static final String TOPIC = PaymentEventTopics.PAYMENT_COMMAND_REQUESTED;
     private static final PaymentRequestedCommand CMD =
             new PaymentRequestedCommand(100L, 1L, "user-1", 10_000, PgScenario.SUCCESS);
     private static final EventEnvelope<PaymentRequestedCommand> ENVELOPE =

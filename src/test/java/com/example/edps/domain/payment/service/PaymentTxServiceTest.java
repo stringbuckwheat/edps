@@ -9,8 +9,8 @@ import com.example.edps.domain.payment.repository.PaymentRepository;
 import com.example.edps.domain.order.enums.PgScenario;
 import com.example.edps.global.error.ErrorType;
 import com.example.edps.global.error.exception.BusinessException;
-import com.example.edps.infra.kafka.KafkaTopics;
-import com.example.edps.infra.outbox.service.OutboxService;
+import com.example.edps.global.common.PaymentEventTopics;
+import com.example.edps.domain.common.port.DomainEventPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,7 +43,7 @@ class PaymentTxServiceTest {
 
     @Mock private PaymentRepository paymentRepository;
     @Mock private PaymentLogRepository paymentLogRepository;
-    @Mock private OutboxService outboxService;
+    @Mock private DomainEventPublisher domainEventPublisher;
 
     @InjectMocks private PaymentTxService paymentTxService;
 
@@ -65,8 +65,8 @@ class PaymentTxServiceTest {
         paymentTxService.confirm(makeCmd(), "trace-1", "evt-1",
                 PayStatus.SUCCESS, "pg-tx-001", null, NOW, NOW.plusSeconds(1));
 
-        then(outboxService).should().save(topicCaptor.capture(), any(), any());
-        assertThat(topicCaptor.getValue()).isEqualTo(KafkaTopics.PAYMENT_EVENT_SUCCEEDED);
+        then(domainEventPublisher).should().publish(topicCaptor.capture(), any(), any(), any());
+        assertThat(topicCaptor.getValue()).isEqualTo(PaymentEventTopics.PAYMENT_EVENT_SUCCEEDED);
         assertThat(payment.getStatus()).isEqualTo(PayStatus.SUCCESS);
         assertThat(payment.getPgTxId()).isEqualTo("pg-tx-001");
     }
@@ -83,8 +83,8 @@ class PaymentTxServiceTest {
         paymentTxService.confirm(makeCmd(), "trace-1", "evt-1",
                 PayStatus.FAILED, null, "카드 한도 초과", NOW, NOW.plusSeconds(1));
 
-        then(outboxService).should().save(topicCaptor.capture(), any(), any());
-        assertThat(topicCaptor.getValue()).isEqualTo(KafkaTopics.PAYMENT_EVENT_FAILED);
+        then(domainEventPublisher).should().publish(topicCaptor.capture(), any(), any(), any());
+        assertThat(topicCaptor.getValue()).isEqualTo(PaymentEventTopics.PAYMENT_EVENT_FAILED);
         assertThat(payment.getStatus()).isEqualTo(PayStatus.FAILED);
     }
 
@@ -97,7 +97,7 @@ class PaymentTxServiceTest {
         paymentTxService.confirm(makeCmd(), "trace-1", "evt-1",
                 PayStatus.SUCCESS, "pg-tx-001", null, NOW, NOW);
 
-        then(outboxService).shouldHaveNoInteractions();
+        then(domainEventPublisher).shouldHaveNoInteractions();
         then(paymentLogRepository).shouldHaveNoInteractions();
     }
 
@@ -141,7 +141,7 @@ class PaymentTxServiceTest {
         paymentTxService.handleTransientTx(makeCmd(), "trace-1", "evt-1",
                 NOW, new RuntimeException("connection timeout"));
 
-        then(outboxService).shouldHaveNoInteractions();
+        then(domainEventPublisher).shouldHaveNoInteractions();
         assertThat(payment.getPaymentLogs()).hasSize(1);
         assertThat(payment.getPaymentLogs().get(0).getFailureReason())
                 .startsWith("TRANSIENT:");
@@ -160,8 +160,8 @@ class PaymentTxServiceTest {
         paymentTxService.handleTransientTx(makeCmd(), "trace-1", "evt-1",
                 NOW, new RuntimeException("DB timeout"));
 
-        then(outboxService).should().save(topicCaptor.capture(), any(), any());
-        assertThat(topicCaptor.getValue()).isEqualTo(KafkaTopics.PAYMENT_EVENT_FAILED);
+        then(domainEventPublisher).should().publish(topicCaptor.capture(), any(), any(), any());
+        assertThat(topicCaptor.getValue()).isEqualTo(PaymentEventTopics.PAYMENT_EVENT_FAILED);
         assertThat(payment.getStatus()).isEqualTo(PayStatus.FAILED);
     }
 
@@ -174,7 +174,7 @@ class PaymentTxServiceTest {
         paymentTxService.handleTransientTx(makeCmd(), "trace-1", "evt-1",
                 NOW, new RuntimeException("timeout"));
 
-        then(outboxService).shouldHaveNoInteractions();
+        then(domainEventPublisher).shouldHaveNoInteractions();
         then(paymentLogRepository).shouldHaveNoInteractions();
     }
 

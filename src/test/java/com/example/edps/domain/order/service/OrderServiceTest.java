@@ -11,8 +11,8 @@ import com.example.edps.domain.product.repository.ProductRepository;
 import com.example.edps.global.error.ErrorType;
 import com.example.edps.global.error.exception.BusinessException;
 import com.example.edps.global.error.exception.SoldOutException;
-import com.example.edps.infra.kafka.KafkaTopics;
-import com.example.edps.infra.outbox.service.OutboxService;
+import com.example.edps.global.common.PaymentEventTopics;
+import com.example.edps.domain.common.port.DomainEventPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,7 +41,7 @@ class OrderServiceTest {
     @Mock private CartRepository cartRepository;
     @Mock private ProductRepository productRepository;
     @Mock private OrderRepository orderRepository;
-    @Mock private OutboxService outboxService;
+    @Mock private DomainEventPublisher domainEventPublisher;
 
     @InjectMocks
     private OrderService orderService;
@@ -63,7 +63,7 @@ class OrderServiceTest {
                         .isEqualTo(ErrorType.EMPTY_CART));
 
         then(orderRepository).should(never()).save(any());
-        then(outboxService).should(never()).save(any(), any(), any());
+        then(domainEventPublisher).should(never()).publish(any(), any(), any(), any());
     }
 
     // ===== 재고 검증 =====
@@ -92,7 +92,7 @@ class OrderServiceTest {
                 });
 
         then(orderRepository).should(never()).save(any());
-        then(outboxService).should(never()).save(any(), any(), any());
+        then(domainEventPublisher).should(never()).publish(any(), any(), any(), any());
     }
 
     @Test
@@ -148,10 +148,9 @@ class OrderServiceTest {
         assertThat(saved.getPayment()).isNotNull();
 
         // outbox 저장
-        then(outboxService).should().save(
-                eq(KafkaTopics.PAYMENT_COMMAND_REQUESTED),
-                any(),
-                any()
+        then(domainEventPublisher).should().publish(
+                eq(PaymentEventTopics.PAYMENT_COMMAND_REQUESTED),
+                any(), any(), any()
         );
     }
 

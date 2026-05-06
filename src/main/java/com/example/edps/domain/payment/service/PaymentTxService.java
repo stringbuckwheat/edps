@@ -10,7 +10,7 @@ import com.example.edps.domain.payment.repository.PaymentRepository;
 import com.example.edps.domain.common.port.DomainEventPublisher;
 import com.example.edps.global.error.ErrorType;
 import com.example.edps.global.error.exception.BusinessException;
-import com.example.edps.infra.kafka.KafkaTopics;
+import com.example.edps.global.common.PaymentEventTopics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -168,8 +168,8 @@ public class PaymentTxService {
 
     private String resolvedTopic(PayStatus status) {
         return status == PayStatus.SUCCESS
-                ? KafkaTopics.PAYMENT_EVENT_SUCCEEDED
-                : KafkaTopics.PAYMENT_EVENT_FAILED;
+                ? PaymentEventTopics.PAYMENT_EVENT_SUCCEEDED
+                : PaymentEventTopics.PAYMENT_EVENT_FAILED;
     }
 
     /**

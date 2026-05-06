@@ -6,7 +6,7 @@ import com.example.edps.domain.payment.event.PaymentRequestedCommand;
 import com.example.edps.domain.payment.port.PaymentGateway;
 import com.example.edps.domain.payment.port.PaymentGatewayResult;
 import com.example.edps.global.error.exception.PgBusinessException;
-import com.example.edps.infra.kafka.KafkaTopics;
+import com.example.edps.global.common.PaymentEventTopics;
 import com.example.edps.infra.kafka.handler.PaymentCommandHandler;
 import com.example.edps.infra.kafka.message.EventEnvelope;
 import org.junit.jupiter.api.DisplayName;
@@ -97,6 +97,6 @@ class PaymentCommandHandlerTest {
     private EventEnvelope<PaymentRequestedCommand> makeEnvelope(Long paymentId) {
         PaymentRequestedCommand cmd = new PaymentRequestedCommand(
                 ORDER_ID, paymentId, "user-1", AMOUNT, PgScenario.SUCCESS);
-        return EventEnvelope.of("trace-1", KafkaTopics.PAYMENT_COMMAND_REQUESTED, cmd);
+        return EventEnvelope.of("trace-1", PaymentEventTopics.PAYMENT_COMMAND_REQUESTED, cmd);
     }
 }

@@ -9,10 +9,10 @@ import com.example.edps.domain.payment.enums.PayStatus;
 import com.example.edps.domain.payment.event.PaymentCompletedEvent;
 import com.example.edps.domain.product.entity.Product;
 import com.example.edps.domain.product.repository.ProductRepository;
+import com.example.edps.domain.common.port.IdempotencyChecker;
 import com.example.edps.global.error.ErrorType;
 import com.example.edps.global.error.exception.BusinessException;
-import com.example.edps.infra.processedevent.ProcessedEvent;
-import com.example.edps.infra.processedevent.ProcessedEventRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,7 +46,8 @@ class PaymentResultTxServiceTest {
     @Mock private OrderRepository orderRepository;
     @Mock private CartRepository cartRepository;
     @Mock private ProductRepository productRepository;
-    @Mock private ProcessedEventRepository processedEventRepository;
+    @Mock private IdempotencyChecker idempotencyChecker;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks private PaymentResultTxService paymentResultTxService;
 
@@ -60,7 +61,7 @@ class PaymentResultTxServiceTest {
     @Test
     @DisplayName("이미 처리된 eventId면 applySuccess()는 아무것도 하지 않는다")
     void applySuccess_skips_duplicate_event() {
-        given(processedEventRepository.existsByEventId(EVENT_ID)).willReturn(true);
+        given(idempotencyChecker.isProcessed(EVENT_ID)).willReturn(true);
 
         paymentResultTxService.applySuccess(makeSuccessEvent(), EVENT_ID);
 
@@ -72,23 +73,20 @@ class PaymentResultTxServiceTest {
     @DisplayName("applySuccess()는 주문을 PAID로 확정하고 장바구니를 삭제하며 ProcessedEvent를 저장한다")
     void applySuccess_marks_order_paid_clears_cart_and_saves_processed_event() {
         Order order = makeOrder();
-        given(processedEventRepository.existsByEventId(EVENT_ID)).willReturn(false);
+        given(idempotencyChecker.isProcessed(EVENT_ID)).willReturn(false);
         given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
 
         paymentResultTxService.applySuccess(makeSuccessEvent(), EVENT_ID);
 
         assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
         then(cartRepository).should().deleteById(USER_ID);
-
-        ArgumentCaptor<ProcessedEvent> captor = ArgumentCaptor.forClass(ProcessedEvent.class);
-        then(processedEventRepository).should().save(captor.capture());
-        assertThat(captor.getValue().getEventId()).isEqualTo(EVENT_ID);
+        then(idempotencyChecker).should().markProcessed(EVENT_ID);
     }
 
     @Test
     @DisplayName("applySuccess() 시 주문이 없으면 ORDER_NOT_FOUND 예외")
     void applySuccess_throws_when_order_not_found() {
-        given(processedEventRepository.existsByEventId(EVENT_ID)).willReturn(false);
+        given(idempotencyChecker.isProcessed(EVENT_ID)).willReturn(false);
         given(orderRepository.findById(ORDER_ID)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> paymentResultTxService.applySuccess(makeSuccessEvent(), EVENT_ID))
@@ -102,7 +100,7 @@ class PaymentResultTxServiceTest {
     @Test
     @DisplayName("이미 처리된 eventId면 applyFailure()는 아무것도 하지 않는다")
     void applyFailure_skips_duplicate_event() {
-        given(processedEventRepository.existsByEventId(EVENT_ID)).willReturn(true);
+        given(idempotencyChecker.isProcessed(EVENT_ID)).willReturn(true);
 
         paymentResultTxService.applyFailure(makeFailureEvent(), EVENT_ID);
 
@@ -120,7 +118,7 @@ class PaymentResultTxServiceTest {
                 new OrderItem(product2, 3, 5_000)
         );
 
-        given(processedEventRepository.existsByEventId(EVENT_ID)).willReturn(false);
+        given(idempotencyChecker.isProcessed(EVENT_ID)).willReturn(false);
         given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
 
         paymentResultTxService.applyFailure(makeFailureEvent(), EVENT_ID);
@@ -133,7 +131,7 @@ class PaymentResultTxServiceTest {
     @Test
     @DisplayName("applyFailure() 시 주문이 없으면 ORDER_NOT_FOUND 예외")
     void applyFailure_throws_when_order_not_found() {
-        given(processedEventRepository.existsByEventId(EVENT_ID)).willReturn(false);
+        given(idempotencyChecker.isProcessed(EVENT_ID)).willReturn(false);
         given(orderRepository.findById(ORDER_ID)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> paymentResultTxService.applyFailure(makeFailureEvent(), EVENT_ID))
@@ -146,21 +144,19 @@ class PaymentResultTxServiceTest {
     @DisplayName("applyFailure() 후 ProcessedEvent가 저장된다")
     void applyFailure_saves_processed_event() {
         Order order = makeOrder();
-        given(processedEventRepository.existsByEventId(EVENT_ID)).willReturn(false);
+        given(idempotencyChecker.isProcessed(EVENT_ID)).willReturn(false);
         given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
 
         paymentResultTxService.applyFailure(makeFailureEvent(), EVENT_ID);
 
-        ArgumentCaptor<ProcessedEvent> captor = ArgumentCaptor.forClass(ProcessedEvent.class);
-        then(processedEventRepository).should().save(captor.capture());
-        assertThat(captor.getValue().getEventId()).isEqualTo(EVENT_ID);
+        then(idempotencyChecker).should().markProcessed(EVENT_ID);
     }
 
     @Test
     @DisplayName("OrderItem이 없는 주문 실패 처리 시 재고 롤백을 호출하지 않는다")
     void applyFailure_does_not_call_increase_stock_when_order_has_no_items() {
         Order order = makeOrder(); // items 없음
-        given(processedEventRepository.existsByEventId(EVENT_ID)).willReturn(false);
+        given(idempotencyChecker.isProcessed(EVENT_ID)).willReturn(false);
         given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
 
         paymentResultTxService.applyFailure(makeFailureEvent(), EVENT_ID);

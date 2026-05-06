@@ -1,7 +1,7 @@
 package com.example.edps.infra.kafka.config;
 
 import com.example.edps.global.error.exception.PgBusinessException;
-import com.example.edps.infra.kafka.KafkaTopics;
+import com.example.edps.global.common.PaymentEventTopics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.TopicPartition;
@@ -25,13 +25,13 @@ public class KafkaRetryConfig {
                         kafkaTemplate,
                         (r, e) -> switch (r.topic()) {
                             // 결제 커맨드 실패
-                            case KafkaTopics.PAYMENT_COMMAND_REQUESTED ->
-                                    new TopicPartition(KafkaTopics.PAYMENT_COMMAND_REQUESTED_DLQ, r.partition());
+                            case PaymentEventTopics.PAYMENT_COMMAND_REQUESTED ->
+                                    new TopicPartition(PaymentEventTopics.PAYMENT_COMMAND_REQUESTED_DLQ, r.partition());
 
                             // 결제 후처리 실패
-                            case KafkaTopics.PAYMENT_EVENT_SUCCEEDED,
-                                 KafkaTopics.PAYMENT_EVENT_FAILED ->
-                                    new TopicPartition(KafkaTopics.PAYMENT_RESULT_DLQ, r.partition());
+                            case PaymentEventTopics.PAYMENT_EVENT_SUCCEEDED,
+                                 PaymentEventTopics.PAYMENT_EVENT_FAILED ->
+                                    new TopicPartition(PaymentEventTopics.PAYMENT_RESULT_DLQ, r.partition());
 
                             default -> new TopicPartition(r.topic() + ".dlq", r.partition());
                         }
