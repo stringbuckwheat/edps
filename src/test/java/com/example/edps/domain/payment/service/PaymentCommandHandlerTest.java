@@ -3,12 +3,12 @@ package com.example.edps.domain.payment.service;
 import com.example.edps.domain.order.enums.PgScenario;
 import com.example.edps.domain.payment.enums.PayStatus;
 import com.example.edps.domain.payment.event.PaymentRequestedCommand;
+import com.example.edps.domain.payment.port.PaymentGateway;
+import com.example.edps.domain.payment.port.PaymentGatewayResult;
 import com.example.edps.global.error.exception.PgBusinessException;
 import com.example.edps.infra.kafka.KafkaTopics;
 import com.example.edps.infra.kafka.handler.PaymentCommandHandler;
 import com.example.edps.infra.kafka.message.EventEnvelope;
-import com.example.edps.infra.pg.PaymentClient;
-import com.example.edps.infra.pg.dto.PgPaymentResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +36,7 @@ import static org.mockito.Mockito.never;
 class PaymentCommandHandlerTest {
 
     @Mock private PaymentTxService paymentTxService;
-    @Mock private PaymentClient paymentClient;
+    @Mock private PaymentGateway paymentGateway;
 
     @InjectMocks private PaymentCommandHandler handler;
 
@@ -47,8 +47,8 @@ class PaymentCommandHandlerTest {
     @Test
     @DisplayName("PG 승인 성공 시 SUCCESS 상태로 결제를 확정한다")
     void pg_approval_success_confirms_payment_as_success() {
-        given(paymentClient.requestPayment(any(PaymentRequestedCommand.class)))
-                .willReturn(new PgPaymentResponse("SUCCESS", "pg-tx-123", null));
+        given(paymentGateway.requestPayment(any(PaymentRequestedCommand.class)))
+                .willReturn(new PaymentGatewayResult(true, "pg-tx-123", null));
 
         handler.process(makeEnvelope(PAYMENT_ID));
 
@@ -65,7 +65,7 @@ class PaymentCommandHandlerTest {
     @Test
     @DisplayName("PG 비즈니스 오류(4xx)는 재시도 없이 FAILED로 확정하고 예외를 전파하지 않는다")
     void pg_business_error_confirms_payment_as_failed_without_retry() {
-        given(paymentClient.requestPayment(any(PaymentRequestedCommand.class)))
+        given(paymentGateway.requestPayment(any(PaymentRequestedCommand.class)))
                 .willThrow(new PgBusinessException(400, "카드 한도 초과"));
 
         handler.process(makeEnvelope(PAYMENT_ID));
@@ -82,7 +82,7 @@ class PaymentCommandHandlerTest {
     @Test
     @DisplayName("일시적 오류는 handleTransientTx를 호출하고 Kafka 재시도를 위해 Exception을 던진다")
     void transient_error_calls_handle_transient_and_rethrows_for_kafka_retry() {
-        given(paymentClient.requestPayment(any(PaymentRequestedCommand.class)))
+        given(paymentGateway.requestPayment(any(PaymentRequestedCommand.class)))
                 .willThrow(new RuntimeException("connection timeout"));
 
         assertThatThrownBy(() -> handler.process(makeEnvelope(PAYMENT_ID)))

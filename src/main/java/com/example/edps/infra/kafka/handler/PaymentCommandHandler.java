@@ -2,12 +2,12 @@ package com.example.edps.infra.kafka.handler;
 
 import com.example.edps.domain.payment.enums.PayStatus;
 import com.example.edps.domain.payment.event.PaymentRequestedCommand;
+import com.example.edps.domain.payment.port.PaymentGateway;
+import com.example.edps.domain.payment.port.PaymentGatewayResult;
 import com.example.edps.domain.payment.service.PaymentTxService;
 import com.example.edps.global.error.exception.PgBusinessException;
 import com.example.edps.global.lock.DistributedLock;
 import com.example.edps.infra.kafka.message.EventEnvelope;
-import com.example.edps.infra.pg.PaymentClient;
-import com.example.edps.infra.pg.dto.PgPaymentResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class PaymentCommandHandler {
     private final PaymentTxService paymentTxService;
-    private final PaymentClient paymentClient;
+    private final PaymentGateway paymentGateway;
 
     @DistributedLock(key = "'payment-claim-' + #envelope.payload().paymentId()")
     public void process(EventEnvelope<PaymentRequestedCommand> envelope) {
@@ -31,10 +31,10 @@ public class PaymentCommandHandler {
 
         try {
             // 트랜잭션 없이 PG 호출
-            PgPaymentResponse res = paymentClient.requestPayment(cmd);
+            PaymentGatewayResult res = paymentGateway.requestPayment(cmd);
             LocalDateTime respondedAt = LocalDateTime.now();
-            PayStatus status = res.isSuccess() ? PayStatus.SUCCESS : PayStatus.FAILED;
-            log.info("PgPaymentResponse.status={}", status);
+            PayStatus status = res.success() ? PayStatus.SUCCESS : PayStatus.FAILED;
+            log.info("PaymentGatewayResult.status={}", status);
 
             // TX: 결과 확정 + 로그 + Outbox 저장
             paymentTxService.confirm(
